@@ -1,0 +1,1 @@
+an elasticsearch plugin enabling ubicity to perform on-demand fetching of content on social media for which we have logic ( APIs etc. ) on the server side.
