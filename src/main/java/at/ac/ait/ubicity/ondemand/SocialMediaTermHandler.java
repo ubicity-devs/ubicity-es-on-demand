@@ -23,12 +23,11 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.PropertiesConfiguration;
+import org.apache.log4j.Logger;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.rest.RestChannel;
 import org.elasticsearch.rest.RestController;
@@ -51,7 +50,7 @@ import at.ac.ait.ubicity.commons.protocol.Terms;
 public class SocialMediaTermHandler implements RestHandler {
 
 	private static final Logger logger = Logger
-			.getLogger(SocialMediaTermHandler.class.getName());
+			.getLogger(SocialMediaTermHandler.class);
 
 	private static String HOST;
 	private static int PORT;
@@ -60,13 +59,14 @@ public class SocialMediaTermHandler implements RestHandler {
 	static {
 		try {
 			// set necessary stuff for us to ueberhaupt be able to work
-			Configuration config = new PropertiesConfiguration("ondemand.cfg");
+			Configuration config = new PropertiesConfiguration(
+					SocialMediaTermHandler.class.getResource("/ondemand.cfg"));
 			HOST = config.getString("plugins.ondemand.reverse_cac_host");
 			PORT = config.getInt("plugins.ondemand.reverse_cac_port");
 			TIMEOUT = config.getInt("plugins.ondemand.reverse_cac_timeout");
 
 		} catch (ConfigurationException noConfig) {
-			logger.severe("could not configure from commons.cfg file");
+			logger.fatal("Configuration not found! " + noConfig.toString());
 		}
 	}
 
@@ -79,26 +79,17 @@ public class SocialMediaTermHandler implements RestHandler {
 	public void handleRequest(RestRequest rr, RestChannel rc) {
 		Command _command = buildCommandFrom(rr);
 
-		System.out.println("q=");
-		System.out.print(rr.param("q"));
-		System.out.println("&m=");
-		System.out.print(rr.param("m"));
-		System.out.println("&c=");
-		System.out.print(rr.param("c"));
+		logger.info("q=" + rr.param("q") + " &m=" + rr.param("m") + " &c="
+				+ rr.param("c"));
 
 		Answer _a = dispatch(_command);
 		StringBuilder sb = new StringBuilder();
 		sb.append("for your request : ").append("\n")
-				.append(_command.toRESTString())
-				.append("\nthe server returned the following answer")
-				.append("\n");
-		// sb.append( "for your request : " ).append( "\n").append(
-		// rr.toString() ).append( "\nthe server returned the following answer"
-		// ).append( "\n" );
-		sb.append("http ");
+				.append(_command.toRESTString() + "\n")
+				.append("the server returned the following answer\n")
+				.append("http ");
 
 		int _code = _a.getCode();
-		// int _code = Answer.HTTP_ACCEPTED;
 
 		switch (_code) {
 		case Answer.HTTP_ACCEPTED:
@@ -131,8 +122,7 @@ public class SocialMediaTermHandler implements RestHandler {
 	}
 
 	public static Command buildCommandFrom(RestRequest rr) {
-		System.out.println("----------------> building command from "
-				+ rr.toString());
+		logger.info("building command from " + rr.toString());
 		Terms _terms = null;
 		Media _media = null;
 		Control _control = null;
@@ -168,18 +158,15 @@ public class SocialMediaTermHandler implements RestHandler {
 		return new Command(_terms, _media, _control);
 	}
 
-	@SuppressWarnings("empty-statement")
 	private Answer dispatch(Command _command) {
 		try {
 			Socket _s = new Socket(HOST, PORT);
 			ObjectInputStream in = null;
-			// ObjectInputStream in = new ObjectInputStream( _s.getInputStream()
-			// );
 			ObjectOutputStream out = new ObjectOutputStream(
 					_s.getOutputStream());
 			out.writeObject(_command);
 			out.flush();
-			System.out.println("[JIT] wrote a Command object to "
+			logger.info("Wrote " + _command.toRESTString() + " to "
 					+ _s.getInetAddress());
 
 			long _startTime = System.currentTimeMillis();
@@ -189,14 +176,14 @@ public class SocialMediaTermHandler implements RestHandler {
 					in = new ObjectInputStream(_s.getInputStream());
 					Object _a = in.readObject();
 					Answer a = (Answer) _a;
-					System.out.println("[JITPlugin] got an Answer for Command "
+
+					logger.info("Got an Answer for Command "
 							+ _command.toRESTString() + " :: " + a.getCode());
 					return a;
 				} catch (IOException | ClassNotFoundException ioex) {
-					Logger.getLogger(SocialMediaTermHandler.class.getName())
-							.log(Level.SEVERE,
-									"IOException while trying to read an answer for dispatch : ",
-									ioex);
+					logger.fatal(
+							"IOException while trying to read an answer for dispatch : ",
+							ioex);
 				} finally {
 					try {
 						in.close();
@@ -213,9 +200,7 @@ public class SocialMediaTermHandler implements RestHandler {
 			}
 
 		} catch (IOException ex) {
-			Logger.getLogger(SocialMediaTermHandler.class.getName())
-					.log(Level.SEVERE,
-							"IOException while trying to dispatch : ", ex);
+			logger.fatal("IOException while trying to dispatch : ", ex);
 		}
 		// this should never happen:
 		return Answer.NIL;
