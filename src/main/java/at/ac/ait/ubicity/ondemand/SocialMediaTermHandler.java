@@ -24,9 +24,6 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 
-import org.apache.commons.configuration.Configuration;
-import org.apache.commons.configuration.ConfigurationException;
-import org.apache.commons.configuration.PropertiesConfiguration;
 import org.apache.log4j.Logger;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.rest.RestChannel;
@@ -42,6 +39,7 @@ import at.ac.ait.ubicity.commons.protocol.Control;
 import at.ac.ait.ubicity.commons.protocol.Media;
 import at.ac.ait.ubicity.commons.protocol.Term;
 import at.ac.ait.ubicity.commons.protocol.Terms;
+import at.ac.ait.ubicity.commons.util.PropertyLoader;
 
 /**
  *
@@ -57,17 +55,12 @@ public class SocialMediaTermHandler implements RestHandler {
 	private static int TIMEOUT;
 
 	static {
-		try {
-			// set necessary stuff for us to ueberhaupt be able to work
-			Configuration config = new PropertiesConfiguration(
-					SocialMediaTermHandler.class.getResource("/ondemand.cfg"));
-			HOST = config.getString("plugins.ondemand.reverse_cac_host");
-			PORT = config.getInt("plugins.ondemand.reverse_cac_port");
-			TIMEOUT = config.getInt("plugins.ondemand.reverse_cac_timeout");
+		PropertyLoader config = new PropertyLoader(
+				SocialMediaTermHandler.class.getResource("/ondemand.cfg"));
 
-		} catch (ConfigurationException noConfig) {
-			logger.fatal("Configuration not found! " + noConfig.toString());
-		}
+		HOST = config.getString("plugins.ondemand.reverse_cac_host");
+		PORT = config.getInt("plugins.ondemand.reverse_cac_port");
+		TIMEOUT = config.getInt("plugins.ondemand.reverse_cac_timeout");
 	}
 
 	@Inject
