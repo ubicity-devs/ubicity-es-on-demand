@@ -26,12 +26,12 @@ import java.net.Socket;
 
 import org.apache.log4j.Logger;
 import org.elasticsearch.common.inject.Inject;
+import org.elasticsearch.rest.BytesRestResponse;
 import org.elasticsearch.rest.RestChannel;
 import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestHandler;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.rest.RestStatus;
-import org.elasticsearch.rest.StringRestResponse;
 
 import at.ac.ait.ubicity.commons.protocol.Answer;
 import at.ac.ait.ubicity.commons.protocol.Command;
@@ -87,28 +87,29 @@ public class SocialMediaTermHandler implements RestHandler {
 		switch (_code) {
 		case Answer.HTTP_ACCEPTED:
 			sb.append(Answer.HTTP_ACCEPTED);
-			rc.sendResponse(new StringRestResponse(RestStatus.ACCEPTED, sb
+
+			rc.sendResponse(new BytesRestResponse(RestStatus.ACCEPTED, sb
 					.toString()));
 		case Answer.HTTP_OK:
 			sb.append(Answer.HTTP_OK);
-			rc.sendResponse(new StringRestResponse(RestStatus.OK, sb.toString()));
+			rc.sendResponse(new BytesRestResponse(RestStatus.OK, sb.toString()));
 		case Answer.HTTP_BAD_REQUEST:
 			sb.append(Answer.HTTP_BAD_REQUEST);
-			rc.sendResponse(new StringRestResponse(RestStatus.BAD_REQUEST, sb
+			rc.sendResponse(new BytesRestResponse(RestStatus.BAD_REQUEST, sb
 					.toString()));
 		case Answer.HTTP_UNAVAILABLE:
 			sb.append(Answer.HTTP_UNAVAILABLE);
-			rc.sendResponse(new StringRestResponse(
+			rc.sendResponse(new BytesRestResponse(
 					RestStatus.SERVICE_UNAVAILABLE, sb.toString()));
 		case Answer.HTTP_SERVERSIDE_ERROR:
 			sb.append(Answer.HTTP_SERVERSIDE_ERROR);
-			rc.sendResponse(new StringRestResponse(
+			rc.sendResponse(new BytesRestResponse(
 					RestStatus.INTERNAL_SERVER_ERROR, sb.toString()));
 		case Answer.HTTP_UNSPECIFIED_ERROR:
 			sb.append(Answer.HTTP_UNSPECIFIED_ERROR);
 			sb.append("\nContact your server administrator, you are the probable victim of a server-side bug");
 			sb.append("\nalternatively or jointly, you may file a bug report at https://github.com/ubicity-principal/ubicity-core/issues");
-			rc.sendResponse(new StringRestResponse(
+			rc.sendResponse(new BytesRestResponse(
 					RestStatus.INTERNAL_SERVER_ERROR, sb.toString()));
 		}
 
