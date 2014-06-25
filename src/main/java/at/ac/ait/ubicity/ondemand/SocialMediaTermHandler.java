@@ -59,7 +59,7 @@ public class SocialMediaTermHandler implements RestHandler {
 				SocialMediaTermHandler.class.getResource("/ondemand.cfg"));
 
 		HOST = config.getString("plugins.ondemand.reverse_cac_host");
-		PORT = config.getInt("plugins.ondemand.reverse_cac_port");
+		PORT = config.getInt("env.jit.reverse_cac_port");
 		TIMEOUT = config.getInt("plugins.ondemand.reverse_cac_timeout");
 	}
 
@@ -180,7 +180,10 @@ public class SocialMediaTermHandler implements RestHandler {
 							ioex);
 				} finally {
 					try {
-						in.close();
+						if (in != null) {
+							in.close();
+						}
+
 						out.close();
 						_s.close();
 					} catch (Throwable t) {
