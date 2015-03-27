@@ -19,10 +19,7 @@ package at.ac.ait.ubicity.ondemand;
 
 import static org.elasticsearch.rest.RestRequest.Method.GET;
 
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.net.Socket;
+import javax.ws.rs.core.MediaType;
 
 import org.apache.log4j.Logger;
 import org.elasticsearch.common.inject.Inject;
@@ -33,13 +30,14 @@ import org.elasticsearch.rest.RestHandler;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.rest.RestStatus;
 
-import at.ac.ait.ubicity.commons.protocol.Answer;
-import at.ac.ait.ubicity.commons.protocol.Command;
-import at.ac.ait.ubicity.commons.protocol.Control;
-import at.ac.ait.ubicity.commons.protocol.Media;
-import at.ac.ait.ubicity.commons.protocol.Term;
-import at.ac.ait.ubicity.commons.protocol.Terms;
+import at.ac.ait.ubicity.commons.jit.Action;
+import at.ac.ait.ubicity.commons.jit.Answer;
+import at.ac.ait.ubicity.commons.jit.Answer.Status;
 import at.ac.ait.ubicity.commons.util.PropertyLoader;
+
+import com.sun.jersey.api.client.Client;
+import com.sun.jersey.api.client.ClientResponse;
+import com.sun.jersey.api.client.WebResource;
 
 /**
  *
@@ -47,20 +45,17 @@ import at.ac.ait.ubicity.commons.util.PropertyLoader;
  */
 public class SocialMediaTermHandler implements RestHandler {
 
-	private static final Logger logger = Logger
-			.getLogger(SocialMediaTermHandler.class);
+	private static final Logger logger = Logger.getLogger(SocialMediaTermHandler.class);
 
 	private static String HOST;
 	private static int PORT;
-	private static int TIMEOUT;
+	Client client = Client.create();
 
 	static {
-		PropertyLoader config = new PropertyLoader(
-				SocialMediaTermHandler.class.getResource("/ondemand.cfg"));
+		PropertyLoader config = new PropertyLoader(SocialMediaTermHandler.class.getResource("/ondemand.cfg"));
 
-		HOST = config.getString("plugins.ondemand.reverse_cac_host");
-		PORT = config.getInt("env.jit.reverse_cac_port");
-		TIMEOUT = config.getInt("plugins.ondemand.reverse_cac_timeout");
+		HOST = config.getString("plugins.ondemand.http_host");
+		PORT = config.getInt("env.http.endpoint_port");
 	}
 
 	@Inject
@@ -70,136 +65,44 @@ public class SocialMediaTermHandler implements RestHandler {
 
 	@Override
 	public void handleRequest(RestRequest rr, RestChannel rc) {
-		Command _command = buildCommandFrom(rr);
+		Action action = buildCommandFrom(rr);
 
-		logger.info("q=" + rr.param("q") + " &m=" + rr.param("m") + " &c="
-				+ rr.param("c"));
-
-		Answer _a = dispatch(_command);
-		StringBuilder sb = new StringBuilder();
-		sb.append("for your request : ").append("\n")
-				.append(_command.toRESTString() + "\n")
-				.append("the server returned the following answer\n")
-				.append("http ");
-
-		int _code = _a.getCode();
-
-		switch (_code) {
-		case Answer.HTTP_ACCEPTED:
-			sb.append(Answer.HTTP_ACCEPTED);
-
-			rc.sendResponse(new BytesRestResponse(RestStatus.ACCEPTED, sb
-					.toString()));
-		case Answer.HTTP_OK:
-			sb.append(Answer.HTTP_OK);
-			rc.sendResponse(new BytesRestResponse(RestStatus.OK, sb.toString()));
-		case Answer.HTTP_BAD_REQUEST:
-			sb.append(Answer.HTTP_BAD_REQUEST);
-			rc.sendResponse(new BytesRestResponse(RestStatus.BAD_REQUEST, sb
-					.toString()));
-		case Answer.HTTP_UNAVAILABLE:
-			sb.append(Answer.HTTP_UNAVAILABLE);
-			rc.sendResponse(new BytesRestResponse(
-					RestStatus.SERVICE_UNAVAILABLE, sb.toString()));
-		case Answer.HTTP_SERVERSIDE_ERROR:
-			sb.append(Answer.HTTP_SERVERSIDE_ERROR);
-			rc.sendResponse(new BytesRestResponse(
-					RestStatus.INTERNAL_SERVER_ERROR, sb.toString()));
-		case Answer.HTTP_UNSPECIFIED_ERROR:
-			sb.append(Answer.HTTP_UNSPECIFIED_ERROR);
-			sb.append("\nContact your server administrator, you are the probable victim of a server-side bug");
-			sb.append("\nalternatively or jointly, you may file a bug report at https://github.com/ubicity-principal/ubicity-core/issues");
-			rc.sendResponse(new BytesRestResponse(
-					RestStatus.INTERNAL_SERVER_ERROR, sb.toString()));
-		}
-
+		Answer answer = dispatch(action);
+		rc.sendResponse(new BytesRestResponse(RestStatus.ACCEPTED, answer.toString()));
 	}
 
-	public static Command buildCommandFrom(RestRequest rr) {
-		logger.info("building command from " + rr.toString());
-		Terms _terms = null;
-		Media _media = null;
-		Control _control = null;
+	public Action buildCommandFrom(RestRequest rr) {
+		String receiver = rr.param("m");
+		String command = rr.param("cmd");
+		String data = rr.param("q");
 
-		String __termString = rr.param("q");
-		if (!(null == __termString || __termString.equals(""))) {
-			_terms = new Terms();
-			__termString = __termString.replace("(", "").replace(")", "")
-					.toLowerCase();
-			String[] __termStrings = __termString.split(" ");
-			for (String ___term : __termStrings) {
-				Term t = new Term(___term);
-				_terms.get().add(t);
-			}
+		logger.info("Data received: receiver: " + receiver + ", command: " + command + ", data: " + data);
 
+		if (receiver != null && command != null && data != null) {
+			data = data.replace("(", "").replace(")", "").toLowerCase();
+			return new Action(receiver, command, data);
 		}
 
-		String __mediaString = rr.param("m");
-		if (!(null == __mediaString || __mediaString.equals(""))) {
-			_media = new Media();
-			__mediaString = __mediaString.replace("(", "").replace(")", "")
-					.toLowerCase();
-			String[] __mediaStrings = __mediaString.split(" ");
-			for (String __medium : __mediaStrings) {
-				_media.get().add(Media.knownMedia.get(__medium.toLowerCase()));
-			}
-		}
-		String _controlString = rr.param("c");
-		if (!(null == _controlString)) {
-			_control = Control.knownControls.get(_controlString.toLowerCase());
-		}
-
-		return new Command(_terms, _media, _control);
+		return null;
 	}
 
-	private Answer dispatch(Command _command) {
-		try {
-			Socket _s = new Socket(HOST, PORT);
-			ObjectInputStream in = null;
-			ObjectOutputStream out = new ObjectOutputStream(
-					_s.getOutputStream());
-			out.writeObject(_command);
-			out.flush();
-			logger.info("Wrote " + _command.toRESTString() + " to "
-					+ _s.getInetAddress());
+	/**
+	 * Send action to Ubicity REST Plugin.
+	 * 
+	 * @param action
+	 * @return
+	 */
+	private Answer dispatch(Action action) {
 
-			long _startTime = System.currentTimeMillis();
+		String endpoint = action.getReceiver() + "?cmd=" + action.getCommand() + "&data=" + action.getData();
+		WebResource webResource = client.resource(HOST + ":" + PORT + "/command/" + endpoint);
 
-			while ((System.currentTimeMillis() - _startTime) < TIMEOUT) {
-				try {
-					in = new ObjectInputStream(_s.getInputStream());
-					Object _a = in.readObject();
-					Answer a = (Answer) _a;
+		ClientResponse response = webResource.accept(MediaType.TEXT_PLAIN).get(ClientResponse.class);
 
-					logger.info("Got an Answer for Command "
-							+ _command.toRESTString() + " :: " + a.getCode());
-					return a;
-				} catch (IOException | ClassNotFoundException ioex) {
-					logger.fatal(
-							"IOException while trying to read an answer for dispatch : ",
-							ioex);
-				} finally {
-					try {
-						if (in != null) {
-							in.close();
-						}
-
-						out.close();
-						_s.close();
-					} catch (Throwable t) {
-						;
-					} finally {
-						in = null;
-						out = null;
-						_s = null;
-					}
-				}
-			}
-
-		} catch (IOException ex) {
-			logger.fatal("IOException while trying to dispatch : ", ex);
+		if (response.getStatus() != 200) {
+			throw new RuntimeException("Failed : HTTP error code : " + response.getStatus());
 		}
-		// this should never happen:
-		return Answer.NIL;
+
+		return new Answer(action, Status.PROCESSED, response.getEntity(String.class));
 	}
 }
