@@ -23,10 +23,6 @@ import org.elasticsearch.common.collect.Lists;
 import org.elasticsearch.common.inject.Module;
 import org.elasticsearch.plugins.AbstractPlugin;
 
-/**
- *
- * @author jan van oort
- */
 public class JitIndexingPlugin extends AbstractPlugin {
 
 	private static final String NAME = "JitIndexingPlugin";

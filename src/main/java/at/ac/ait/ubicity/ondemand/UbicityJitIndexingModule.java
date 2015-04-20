@@ -20,10 +20,6 @@ package at.ac.ait.ubicity.ondemand;
 
 import org.elasticsearch.common.inject.AbstractModule;
 
-/**
- *
- * @author jan van oort
- */
 public class UbicityJitIndexingModule extends AbstractModule {
 
 	@Override

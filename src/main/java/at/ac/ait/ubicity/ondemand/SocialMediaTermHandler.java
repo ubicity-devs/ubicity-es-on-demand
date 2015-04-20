@@ -39,10 +39,6 @@ import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
 
-/**
- *
- * @author jan van oort
- */
 public class SocialMediaTermHandler implements RestHandler {
 
 	private static final Logger logger = Logger.getLogger(SocialMediaTermHandler.class);
